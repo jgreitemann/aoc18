@@ -7,28 +7,19 @@
 #include <string>
 #include <vector>
 
+#include "rotate.hpp"
+
 size_t game(size_t n_players, size_t max_marble) {
     std::deque<size_t> circle {0};
     std::vector<size_t> scores(n_players);
 
-    auto current = circle.begin();
-    using it_t = typename decltype(circle)::iterator;
-    using diff_t = typename decltype(circle)::difference_type;
-    auto next = [&] (it_t it, diff_t n = 1) {
-                    diff_t i = it - circle.begin();
-                    while (n < 0)
-                        n += circle.size();
-                    i += n;
-                    return circle.begin() + (i % circle.size());
-                };
-
     size_t p = 0;
     for (size_t m = 1; m <= max_marble; ++m, p = (p + 1) % n_players) {
         if (m % 23 == 0) {
-            scores[p] += m + *(current = next(current, -7));
-            current = circle.erase(current);
+            scores[p] += m + *rotate(circle, -7);
+            circle.pop_front();
         } else {
-            current = circle.insert(next(current, 1) + 1, m);
+            circle.insert(rotate(circle, 2), m);
         }
     }
     
