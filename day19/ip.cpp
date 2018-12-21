@@ -153,9 +153,9 @@ int main() {
                 reg = {1, reg[1], 5, 10551273, 10551275, 0};
             }
             reg = program[ip](reg);
-            // std::copy(reg.begin(), reg.end(),
-            //           std::ostream_iterator<size_t>{std::cout, ", "});
-            // std::cout << '\n';
+            std::copy(reg.begin(), reg.end(),
+                      std::ostream_iterator<size_t>{std::cout, ", "});
+            std::cout << '\n';
             ++ip;
         }
         --ip;
@@ -168,11 +168,5 @@ int main() {
     execute_program({});
     std::cout << "---------------------------------\n";
     // Part 2
-    execute_program({1});
-    // execute_program({0, 1, 4, 10551270, 10551275, 0});
-    // execute_program({1, 2, 4, 10551270, 10551275, 0});
-    // execute_program({1, 10, 4, 10551270, 10551275, 0});
-    // execute_program({1, 10551273, 4, 10551270, 10551275, 0});
-    // execute_program({1, 10551274, 4, 10551270, 10551275, 0});
-    // execute_program({10551276, 10551275, 4, 10551270, 10551275, 0});
+    // execute_program({1});
 }
