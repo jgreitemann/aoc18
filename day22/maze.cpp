@@ -2,6 +2,7 @@
 #include <array>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <numeric>
 #include <utility>
 #include <vector>
@@ -39,7 +40,7 @@ struct coord {
 static constexpr inline size_t depth = 3066;
 static constexpr inline coord target = {13, 726};
 
-static constexpr inline coord dim = {50, 1000};
+static constexpr inline coord dim = {75, 1500};
 
 constexpr coord::operator size_t() const {
     return y * (dim.x + 1) + x;
@@ -137,19 +138,27 @@ int main() {
     for (auto & d : dist)
         d.resize(maze.size(), std::numeric_limits<size_t>::max());
 
-    auto update_dist = Y{[&](auto self, coord c, mode m, size_t d) {
-                             if (!c || !maze[c].can_enter(m))
-                                 return;
+    std::multimap<coord, std::pair<mode, size_t>> todo;
+    todo.insert({coord{0, 0}, {mode::torch, 0}});
 
-                             if (dist[m][c] > d) {
-                                 dist[m][c] = d;
-                                 self(c, maze[c].other_tool(m), d + 7);
-                                 for (coord cc : c.neighbors()) {
-                                     self(cc, m, d + 1);
-                                 }
-                             }
-                         }};
-    update_dist(coord{0, 0}, mode::torch, 0);
+    while (!todo.empty()) {
+        auto top = todo.begin();
+        auto [c, p] = *top;
+        auto [m, d] = p;
+
+        todo.erase(top);
+
+        if (!c || !maze[c].can_enter(m))
+            continue;
+
+        if (dist[m][c] > d) {
+            dist[m][c] = d;
+            todo.insert({c, {maze[c].other_tool(m), d + 7}});
+            for (coord cc : c.neighbors()) {
+                todo.insert({cc, {m, d + 1}});
+            }
+        }
+    }
 
     std::cout << "Fastest way to reach the target: "
               << dist[mode::torch][target] << "\n";
