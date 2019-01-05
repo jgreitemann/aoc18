@@ -71,6 +71,8 @@ int main() {
                              std::istream_iterator<char>{}};
                  }();
     // regex = "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$";
+    // regex = "^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$";
+    // regex = "^N(W|E)N$"; // throws
 
     std::cout << "Regex: " << regex << "\n";
 
@@ -107,7 +109,8 @@ int main() {
                 break;
             }
         }
-        seq.push_back(re.substr(i, std::string_view::npos));
+        if (i < re.size())
+            seq.push_back(re.substr(i, std::string_view::npos));
         return seq;
     }};
 
@@ -115,24 +118,6 @@ int main() {
     full_view.remove_prefix(1);
     full_view.remove_suffix(1);
     group regex_tree{tokenize(full_view)};
-
-    auto n_seq = Y{[](auto self, sequence const& seq) -> size_t {
-        return std::accumulate(seq.begin(), seq.end(), 1ul,
-            [&](size_t acc, token const& t) -> size_t {
-                return acc * std::visit(overload{
-                        [](std::string_view sv) {
-                            return 1ul;
-                        },
-                        [&](group const& gr) {
-                            return std::accumulate(gr.begin(), gr.end(), 0ul,
-                                [&](size_t acc, sequence const & s) {
-                                    return acc + self(s);
-                                });
-                        }
-                    }, t);
-            });
-    }};
-    std::cout << "Total number of paths: " << n_seq(regex_tree.front()) << "\n\n";
 
     std::deque<std::deque<room>> rooms = {{{0}}};
     std::pair<size_t, size_t> dim = {1, 1};
@@ -196,9 +181,13 @@ int main() {
                 };
 
     size_t i = 0;
-    auto traverse = Y{[&](auto self, iterator it, int x, int y, int d) -> void {
-        bool nl = true;
-        while (!it.empty()) {
+    auto traverse = Y{[&](auto self, iterator it, int x, int y, int d)
+                      -> std::tuple<int, int, int>
+    {
+        bool inequiv = false;
+        while (it.top().s != it.top().s_end) {
+            if (inequiv)
+                throw std::runtime_error("inequivalent branches");
             std::visit(overload{
                     [&](std::string_view sv) -> void {
                         for (char c : sv) {
@@ -207,30 +196,37 @@ int main() {
                             get_room(x, y).distance = get_room(x, y).distance == -1
                                 ? d : std::min(get_room(x, y).distance, d);
                         }
-
-                        // next in sequence
-                        while (!it.empty()) {
-                            ++it.top().s;
-                            if (it.top().s == it.top().s_end)
-                                it.pop();
-                            else
-                                break;
-                        }
                     },
                     [&](group const& gr) -> void {
                         it.push({gr.begin(), gr.end(),
                                  gr.front().begin(), gr.front().end()});
+                        int xx = -1, yy = -1, dd = -1;
                         for (; it.top().g != it.top().g_end; ++it.top().g) {
                             it.top().s = it.top().g->begin();
                             it.top().s_end = it.top().g->end();
-                            self(it, x, y, d);
+
+                            int xxx, yyy, ddd;
+                            std::tie(xxx, yyy, ddd) = self(it, x, y, d);
+                            if (dd >= 0) {
+                                if (xx != xxx || yy != yyy)
+                                    inequiv = true;
+                                dd = std::min(dd, ddd);
+                            } else {
+                                xx = xxx;
+                                yy = yyy;
+                                dd = ddd;
+                            }
                         }
-                        it = {};
-                        nl = false;
+                        it.pop();
+                        x = xx;
+                        y = yy;
+                        d = dd;
                     }}, *it.top().s);
+
+            // next in sequence
+            ++it.top().s;
         }
-        if (nl)
-            std::cout << ++i << '\n';
+        return std::make_tuple(x, y, d);
     }};
 
     iterator it;
@@ -244,6 +240,16 @@ int main() {
         for (auto const& r : row)
             max_d = std::max(max_d, r.distance);
     std::cout << "Furthest room requires passing " << max_d << " doors\n\n";
+
+    // find number of rooms at least 1000 doors away
+    std::cout << std::accumulate(rooms.begin(), rooms.end(), 0,
+            [](int acc, auto const& row) {
+                return acc + std::accumulate(row.begin(), row.end(), 0,
+                                             [](int acc, auto const& r) {
+                                                 return acc + (r.distance >= 1000);
+                                             });
+            })
+              << " rooms are at least 1000 doors away.\n";
 
     // draw the map
     const size_t width = dim.first;
