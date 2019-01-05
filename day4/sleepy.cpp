@@ -8,13 +8,7 @@
 #include <string>
 #include <utility>
 #include <variant>
-
-template <typename... Bases>
-struct overload : Bases... {
-    using Bases::operator()...;
-};
-template <typename... Bases>
-overload(Bases...) -> overload<Bases...>;
+#include "../functional.hpp"
 
 struct timestamp {
     unsigned int year;
